@@ -17,10 +17,6 @@ def format_speed(val_mb, use_bits):
 
 # ESTA ES LA FUNCIÓN QUE TE FALTA O QUE NO ENCUENTRA
 def format_decimal(value):
-    """
-    Formatea un número float a string con estilo europeo:
-    Ej: 2389.5 -> "2.389,5"
-    """
     try:
         # Formato estándar inglés (coma miles, punto decimal)
         s = "{:,.1f}".format(value)
