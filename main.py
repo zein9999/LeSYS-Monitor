@@ -9,8 +9,8 @@ from PySide6.QtCore import Qt, QSize, QPoint, QTimer
 from PySide6.QtGui import QAction, QIcon, QPainter, QColor
 
 import config
-from workers import WorkerThread
-from widgets import HardwareRow, NetworkRow, DiskRow
+from workers import WorkerThread, ProcessWorker
+from widgets import HardwareRow, NetworkRow, DiskRow, ProcessTree
 from splash import SplashScreen
 
 
@@ -18,45 +18,33 @@ class MonitorFinal(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("LeSYS")
-        self.resize(520, 650)
+        self.resize(1450, 680)
         self.use_bits = False
         self.is_dark = True
 
-        self.main_layout = QVBoxLayout()
-        self.main_layout.setSpacing(10)
+        self.main_layout = QHBoxLayout()
+        self.main_layout.setSpacing(20)
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.setLayout(self.main_layout)
+
+        self.left_container = QWidget()
+        self.left_layout = QVBoxLayout(self.left_container)
+        self.left_layout.setContentsMargins(0, 0, 0, 0)
+        self.left_layout.setSpacing(10)
 
         h_box = QHBoxLayout()
         h_box.addWidget(QLabel("PERFORMANCE", objectName="HeaderTitle"))
         h_box.addStretch()
-
-        self.btn_opts = QPushButton()
-        self.btn_opts.setCursor(Qt.PointingHandCursor)
-        self.btn_opts.setFixedSize(30, 30)
-        self.btn_opts.setIconSize(QSize(20, 20))
-
-        self.menu = QMenu(self)
-        self.act_unit = QAction("Switch to Kbps/Mbps", self, checkable=True)
-        self.act_unit.triggered.connect(self.toggle_unit)
-        self.act_theme = QAction("Light Mode", self, checkable=True)
-        self.act_theme.triggered.connect(self.toggle_theme)
-        self.menu.addAction(self.act_unit)
-        self.menu.addAction(self.act_theme)
-
-        self.btn_opts.clicked.connect(lambda: self.menu.exec(self.btn_opts.mapToGlobal(QPoint(0, 30))))
-
-        h_box.addWidget(self.btn_opts)
-        self.main_layout.addLayout(h_box)
+        self.left_layout.addLayout(h_box)
 
         self.row_cpu = HardwareRow("CPU")
-        self.main_layout.addWidget(self.row_cpu)
+        self.left_layout.addWidget(self.row_cpu)
         self.row_ram = HardwareRow("RAM")
-        self.main_layout.addWidget(self.row_ram)
+        self.left_layout.addWidget(self.row_ram)
         self.row_gpu = HardwareRow("GPU")
-        self.main_layout.addWidget(self.row_gpu)
+        self.left_layout.addWidget(self.row_gpu)
         self.row_net = NetworkRow()
-        self.main_layout.addWidget(self.row_net)
+        self.left_layout.addWidget(self.row_net)
 
         self.disk_frame = QFrame()
         self.disk_frame.setObjectName("Card")
@@ -77,6 +65,7 @@ class MonitorFinal(QWidget):
         lbl_h_pct.setObjectName("HeaderCol")
         lbl_h_pct.setFixedWidth(40)
         lbl_h_pct.setAlignment(Qt.AlignRight)
+
         lbl_h_read = QLabel("READ")
         lbl_h_read.setObjectName("HeaderCol")
         lbl_h_read.setFixedWidth(85)
@@ -108,7 +97,41 @@ class MonitorFinal(QWidget):
                 pass
         self.d_layout.addStretch()
         self.disk_frame.setLayout(self.d_layout)
-        self.main_layout.addWidget(self.disk_frame, stretch=1)
+        self.left_layout.addWidget(self.disk_frame, stretch=1)
+
+        self.main_layout.addWidget(self.left_container, stretch=1)
+
+        self.right_container = QFrame()
+        self.right_layout = QVBoxLayout(self.right_container)
+        self.right_layout.setContentsMargins(0, 0, 0, 0)
+        self.right_layout.setSpacing(10)
+
+        right_header = QHBoxLayout()
+        right_header.addWidget(QLabel("PROCESSES", objectName="HeaderTitle"))
+        right_header.addStretch()
+
+        self.btn_opts = QPushButton()
+        self.btn_opts.setCursor(Qt.PointingHandCursor)
+        self.btn_opts.setFixedSize(30, 30)
+        self.btn_opts.setIconSize(QSize(20, 20))
+
+        self.menu = QMenu(self)
+        self.act_unit = QAction("Switch to Kbps/Mbps", self, checkable=True)
+        self.act_unit.triggered.connect(self.toggle_unit)
+        self.act_theme = QAction("Light Mode", self, checkable=True)
+        self.act_theme.triggered.connect(self.toggle_theme)
+        self.menu.addAction(self.act_unit)
+        self.menu.addAction(self.act_theme)
+
+        self.btn_opts.clicked.connect(lambda: self.menu.exec(self.btn_opts.mapToGlobal(QPoint(0, 30))))
+        right_header.addWidget(self.btn_opts)
+
+        self.right_layout.addLayout(right_header)
+
+        self.proc_table = ProcessTree()
+        self.right_layout.addWidget(self.proc_table)
+
+        self.main_layout.addWidget(self.right_container, stretch=1.3)
 
         self.apply_stylesheet()
         self.refresh_settings_icon()
@@ -118,6 +141,10 @@ class MonitorFinal(QWidget):
         self.worker = WorkerThread()
         self.worker.data_signal.connect(self.update_ui)
         self.worker.start()
+
+        self.proc_worker = ProcessWorker()
+        self.proc_worker.processes_signal.connect(self.proc_table.update_data)
+        self.proc_worker.start()
 
     def get_icon_path(self):
         base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -161,15 +188,33 @@ class MonitorFinal(QWidget):
         self.row_gpu.update_val(data['gpu'], data.get('gpu_extra', ''))
         self.row_net.update_net(data['net_down'], data['net_up'], data.get('net_iface', ''))
 
+        total_read = 0
+        total_write = 0
+        if 'disk_io' in data:
+            for k, v in data['disk_io'].items():
+                total_read += v[0]
+                total_write += v[1]
+
         for name, row in self.disks.items():
             if name in data['disk_usage']:
                 usage = data['disk_usage'][name]
-                r_mb, w_mb = data['disk_io'].get(name, (0, 0))
-                row.update_state(usage, r_mb, w_mb)
+                try:
+                    spec_io = data['disk_io'].get(name)
+                    if spec_io:
+                        row.update_state(usage, spec_io[0], spec_io[1])
+                    else:
+                        row.update_state(usage, total_read, total_write)
+                except:
+                    row.update_state(usage, total_read, total_write)
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    app_icon_path = os.path.join(base_dir, "assets", "logo.png")
+    app.setWindowIcon(QIcon(app_icon_path))
+
     splash = SplashScreen()
     splash.show()
     main_window = None
@@ -179,10 +224,11 @@ if __name__ == "__main__":
         global main_window
         main_window = MonitorFinal()
         splash_geo = splash.geometry()
-        win_geo = main_window.geometry()
-        x = splash_geo.x() + (splash_geo.width() - win_geo.width()) // 2
-        y = splash_geo.y() + (splash_geo.height() - win_geo.height()) // 2
+        screen_geo = app.primaryScreen().geometry()
+        x = (screen_geo.width() - main_window.width()) // 2
+        y = (screen_geo.height() - main_window.height()) // 2
         main_window.move(x, y)
+
         main_window.show()
         splash.close()
 

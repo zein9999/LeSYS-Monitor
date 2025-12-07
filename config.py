@@ -31,19 +31,60 @@ THEMES = {
 
 active_theme = THEMES["Dark"]
 
+
 def get_stylesheet(theme):
     return f"""
         QWidget {{ background-color: {theme['bg_main']}; color: {theme['text_main']}; font-family: 'Segoe UI', sans-serif; }}
         QLabel {{ background-color: transparent; }}
         QFrame#Card {{ background-color: {theme['bg_card']}; border-radius: 12px; border: 1px solid {theme['border']}; }}
+
         QLabel#Title {{ font-size: 13px; font-weight: 600; color: {theme['text_dim']}; }}
         QLabel#HeaderCol {{ font-size: 11px; font-weight: 700; color: {theme['text_dim']}; text-transform: uppercase; }}
         QLabel#Value {{ font-size: 26px; font-weight: bold; color: {theme['text_main']}; }}
         QLabel#HeaderTitle {{ font-size: 22px; font-weight: 800; color: {theme['text_main']}; letter-spacing: 1px; }}
+
         QProgressBar {{ border: none; background-color: {theme['bar_bg']}; border-radius: 4px; height: 6px; text-align: center; }}
         QPushButton {{ background-color: transparent; border: none; border-radius: 6px; color: {theme['text_dim']}; font-size: 16px; padding: 4px; }}
         QPushButton:hover {{ background-color: {theme['btn_hover']}; color: {theme['text_main']}; }}
+
         QMenu {{ background-color: {theme['menu_bg']}; border: 1px solid {theme['border']}; border-radius: 8px; padding: 6px; }}
         QMenu::item {{ background-color: transparent; padding: 8px 25px 8px 15px; border-radius: 4px; color: {theme['text_main']}; font-size: 13px; }}
         QMenu::item:selected {{ background-color: {theme['menu_sel']}; }}
+
+        QScrollBar:vertical {{ background: {theme['bg_main']}; width: 10px; margin: 0px; border-radius: 5px; }}
+        QScrollBar::handle:vertical {{ background: #404249; min-height: 30px; border-radius: 5px; margin: 2px; }}
+        QScrollBar::handle:vertical:hover {{ background: #585b63; }}
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
+
+        QTreeWidget {{
+            background-color: {theme['bg_card']};
+            border: 1px solid {theme['border']};
+            border-radius: 8px;
+            font-size: 12px;
+            outline: none;
+        }}
+        /* Padding horizontal para que el texto no toque los bordes al alinear */
+        QTreeWidget::item {{ 
+            padding: 4px; 
+            padding-left: 5px; 
+            padding-right: 5px; 
+            border-bottom: 1px solid {theme['grid_line']}; 
+        }}
+        QTreeWidget::item:hover {{ background-color: {theme['btn_hover']}; }}
+        QTreeWidget::item:selected {{ background-color: {theme['menu_sel']}; color: {theme['text_main']}; }}
+
+        QHeaderView::section {{
+            background-color: {theme['bg_main']};
+            color: {theme['text_dim']};
+            border: none;
+            border-bottom: 2px solid {theme['border']};
+            padding: 5px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+        }}
+        QHeaderView::down-arrow, QHeaderView::up-arrow {{ width: 0px; height: 0px; border: none; }}
     """
