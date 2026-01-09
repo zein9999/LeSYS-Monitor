@@ -15,12 +15,9 @@ def format_speed(val_mb, use_bits):
     else:
         return f"{format_decimal(val / 1024)} {units[2]}"
 
-# ESTA ES LA FUNCIÓN QUE TE FALTA O QUE NO ENCUENTRA
 def format_decimal(value):
     try:
-        # Formato estándar inglés (coma miles, punto decimal)
         s = "{:,.1f}".format(value)
-        # Invertimos: Coma -> X, Punto -> Coma, X -> Punto
         return s.replace(",", "X").replace(".", ",").replace("X", ".")
     except:
         return "0,0"
